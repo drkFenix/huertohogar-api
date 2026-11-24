@@ -1,0 +1,153 @@
+{
+  "info": {
+    "name": "HuertoHogar API v1 - Evaluacion Parcial 3 (DSY1104)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Coleccion oficial de pruebas REST con JWT HS256, refresh token, roles (ADMIN/VENDEDOR/CLIENTE) y CRUD sobre MySQL 8."
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1" },
+    { "key": "adminEmail", "value": "admin@huertohogar.cl" },
+    { "key": "adminPassword", "value": "AdminHuerto2026" },
+    { "key": "vendedorEmail", "value": "vendedor@huertohogar.cl" },
+    { "key": "vendedorPassword", "value": "VendedorHuerto2026" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "vendedorToken", "value": "" },
+    { "key": "productoId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "1. GET Boletas sin Token (espera 401)",
+      "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/boletas" },
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('HTTP 401 sin token', () => pm.response.to.have.status(401));"] } }]
+    },
+    {
+      "name": "2. POST Login ADMIN (guarda accessToken y refreshToken)",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"correo\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}" },
+        "url": "{{baseUrl}}/auth/login"
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "pm.test('Login ADMIN 200', () => pm.response.to.have.status(200));",
+            "const data = pm.response.json();",
+            "pm.collectionVariables.set('accessToken', data.accessToken);",
+            "pm.collectionVariables.set('refreshToken', data.refreshToken);"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "3. POST Refresh Token (renueva JWT)",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" },
+        "url": "{{baseUrl}}/auth/refresh"
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "pm.test('Refresh 200', () => pm.response.to.have.status(200));",
+            "const data = pm.response.json();",
+            "pm.collectionVariables.set('accessToken', data.accessToken);"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "4. GET Productos (Publico)",
+      "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/productos" },
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('GET productos 200', () => pm.response.to.have.status(200));"] } }]
+    },
+    {
+      "name": "5. POST Crear Producto (ADMIN -> 201)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"codigo\": \"FR090\",\n  \"nombre\": \"Frutillas de San Pedro\",\n  \"categoriaId\": 1,\n  \"precio\": 2500,\n  \"stock\": 40,\n  \"unidad\": \"bandeja 500g\",\n  \"origen\": \"San Pedro, RM\",\n  \"descripcion\": \"Frutillas frescas de temporada\",\n  \"imagen\": \"/assets/logo.png\",\n  \"enOferta\": false\n}"
+        },
+        "url": "{{baseUrl}}/productos"
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "pm.test('POST producto 201', () => pm.response.to.have.status(201));",
+            "pm.collectionVariables.set('productoId', pm.response.json().id);"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "6. PUT Actualizar Producto (ADMIN -> 200)",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"codigo\": \"FR090\",\n  \"nombre\": \"Frutillas Orgánicas de San Pedro\",\n  \"categoriaId\": 1,\n  \"precio\": 2600,\n  \"stock\": 35,\n  \"unidad\": \"bandeja 500g\",\n  \"origen\": \"San Pedro, RM\",\n  \"descripcion\": \"Frutillas frescas actualizadas\",\n  \"imagen\": \"/assets/logo.png\",\n  \"enOferta\": true,\n  \"precioOferta\": 2190\n}"
+        },
+        "url": "{{baseUrl}}/productos/{{productoId}}"
+      },
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('PUT producto 200', () => pm.response.to.have.status(200));"] } }]
+    },
+    {
+      "name": "7. DELETE Eliminar Producto (ADMIN -> 204)",
+      "request": { "method": "DELETE", "url": "{{baseUrl}}/productos/{{productoId}}" },
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('DELETE producto 204', () => pm.response.to.have.status(204));"] } }]
+    },
+    {
+      "name": "8. POST Login VENDEDOR",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"correo\": \"{{vendedorEmail}}\",\n  \"password\": \"{{vendedorPassword}}\"\n}" },
+        "url": "{{baseUrl}}/auth/login"
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "pm.test('Login VENDEDOR 200', () => pm.response.to.have.status(200));",
+            "pm.collectionVariables.set('vendedorToken', pm.response.json().accessToken);"
+          ]
+        }
+      }]
+    },
+    {
+      "name": "9. POST Producto como VENDEDOR (espera 403)",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendedorToken}}", "type": "string" }] },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"codigo\": \"NO001\",\n  \"nombre\": \"No permitido\",\n  \"categoriaId\": 1,\n  \"precio\": 1000,\n  \"stock\": 5,\n  \"unidad\": \"kilo\"\n}" },
+        "url": "{{baseUrl}}/productos"
+      },
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('VENDEDOR bloqueado 403', () => pm.response.to.have.status(403));"] } }]
+    },
+    {
+      "name": "10. GET Boletas como VENDEDOR (espera 200)",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{vendedorToken}}", "type": "string" }] },
+        "method": "GET",
+        "url": "{{baseUrl}}/boletas"
+      },
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('VENDEDOR consulta boletas 200', () => pm.response.to.have.status(200));"] } }]
+    }
+  ]
+}
